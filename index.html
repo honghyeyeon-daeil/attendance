@@ -364,7 +364,10 @@ function showResult(icon, title, sub, color) {
 }
 
 function goBack() {
-  showScreen('qr');
+  document.getElementById('sid-input').value = '';
+  document.getElementById('form-msg').textContent = '';
+  document.getElementById('submit-btn').disabled = false;
+  showScreen('form');
 }
 
 function checkUrlParams() {

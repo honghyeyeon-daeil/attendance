@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>아침자습 출석 QR</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f8f8f6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    color: #222;
+  }
+  #main-card {
+    background: #fff;
+    border-radius: 20px;
+    border: 1px solid #e8e8e5;
+    padding: 36px 40px;
+    width: 100%;
+    max-width: 520px;
+    text-align: center;
+  }
+  #top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 28px;
+  }
+  #school-info { text-align: left; }
+  #school-name { font-size: 20px; font-weight: 500; color: #111; }
+  #class-name { font-size: 13px; color: #888; margin-top: 3px; }
+  #time-area { text-align: right; }
+  #clock { font-size: 36px; font-weight: 500; letter-spacing: 1px; color: #111; }
+  #date-str { font-size: 13px; color: #888; margin-top: 3px; }
+  #qr-wrap {
+    display: inline-block;
+    padding: 18px;
+    border: 1px solid #e0e0dc;
+    border-radius: 16px;
+    background: #fff;
+    margin-bottom: 20px;
+  }
+  #qr-canvas { display: block; }
+  #status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  #dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #1D9E75;
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  #status-text { font-size: 14px; color: #666; }
+  #timer-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  #timer-label { font-size: 13px; color: #888; }
+  #timer-bar-wrap {
+    width: 200px; height: 6px;
+    background: #eee;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  #timer-bar {
+    height: 100%;
+    border-radius: 3px;
+    background: #1D9E75;
+    transition: width 1s linear, background 0.3s;
+  }
+  #timer-count { font-size: 13px; font-weight: 500; color: #222; min-width: 22px; }
+  #controls {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .ctrl-btn {
+    font-size: 13px;
+    padding: 7px 16px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    background: transparent;
+    color: #555;
+    cursor: pointer;
+  }
+  .ctrl-btn:hover { background: #f4f4f2; }
+  #config-area {
+    display: none;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    padding: 16px 18px;
+    background: #f8f8f6;
+    text-align: left;
+    margin-top: 8px;
+  }
+  #config-area label {
+    font-size: 12px;
+    color: #777;
+    display: block;
+    margin-bottom: 4px;
+    margin-top: 10px;
+  }
+  #config-area label:first-child { margin-top: 0; }
+  #config-area input {
+    width: 100%;
+    font-size: 13px;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+    color: #222;
+  }
+  .cfg-row { display: flex; gap: 8px; }
+  .cfg-row > div { flex: 1; }
+  #apply-btn {
+    margin-top: 14px;
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #1D9E75;
+    background: #E1F5EE;
+    color: #085041;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  #apply-btn:hover { background: #9FE1CB; }
+  #no-url-notice {
+    display: none;
+    font-size: 12px;
+    color: #E24B4A;
+    margin-bottom: 12px;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+</style>
+</head>
+<body>
+<div id="main-card">
+  <div id="top-bar">
+    <div id="school-info">
+      <div id="school-name">학교명</div>
+      <div id="class-name">반 정보</div>
+    </div>
+    <div id="time-area">
+      <div id="clock">--:--:--</div>
+      <div id="date-str">--</div>
+    </div>
+  </div>
+
+  <div id="no-url-notice">아래 설정에서 Apps Script URL을 입력해주세요</div>
+
+  <div id="qr-wrap">
+    <canvas id="qr-canvas" width="240" height="240"></canvas>
+  </div>
+
+  <div id="status-bar">
+    <div id="dot"></div>
+    <span id="status-text">QR 활성화됨 · 스캔하여 출석 제출</span>
+  </div>
+
+  <div id="timer-row">
+    <span id="timer-label">다음 갱신</span>
+    <div id="timer-bar-wrap">
+      <div id="timer-bar" style="width:100%"></div>
+    </div>
+    <span id="timer-count">60</span>초
+  </div>
+
+  <div id="controls">
+    <button class="ctrl-btn" onclick="toggleConfig()">설정 열기 / 닫기</button>
+    <button class="ctrl-btn" onclick="forceRefresh()">QR 즉시 갱신</button>
+  </div>
+
+  <div id="config-area">
+    <div class="cfg-row">
+      <div>
+        <label>학교명</label>
+        <input id="cfg-school" placeholder="예: 대일고등학교">
+      </div>
+      <div>
+        <label>반 정보</label>
+        <input id="cfg-class" placeholder="예: 2학년 아침자습">
+      </div>
+    </div>
+    <label>Apps Script 웹앱 URL</label>
+    <input id="cfg-url" placeholder="https://script.google.com/macros/s/.../exec">
+    <label>QR 갱신 주기 (초, 권장: 60)</label>
+    <input id="cfg-interval" type="number" value="60" min="10" max="300">
+    <button id="apply-btn" onclick="applyConfig()">적용하기</button>
+  </div>
+</div>
+
+<script>
+  var APPS_URL = '';
+  var INTERVAL = 60;
+  var remaining = INTERVAL;
+  var currentToken = '';
+  var configOpen = false;
+
+  function loadSaved() {
+    var school = localStorage.getItem('att_school') || '';
+    var cls   = localStorage.getItem('att_class')  || '';
+    var url   = localStorage.getItem('att_url')    || '';
+    var iv    = parseInt(localStorage.getItem('att_interval')) || 60;
+    if (school) document.getElementById('school-name').textContent = school;
+    if (cls)    document.getElementById('class-name').textContent  = cls;
+    document.getElementById('cfg-school').value   = school;
+    document.getElementById('cfg-class').value    = cls;
+    document.getElementById('cfg-url').value      = url;
+    document.getElementById('cfg-interval').value = iv;
+    APPS_URL = url;
+    INTERVAL = iv;
+    remaining = iv;
+    document.getElementById('no-url-notice').style.display = url ? 'none' : 'block';
+  }
+
+  function makeToken() {
+    return Math.floor(Date.now() / 1000).toString(36);
+  }
+
+  function buildQRUrl() {
+    if (!APPS_URL) return 'https://script.google.com (설정에서 URL을 입력해주세요)';
+    return APPS_URL + '?t=' + currentToken;
+  }
+
+  function drawQR(url) {
+    var canvas = document.getElementById('qr-canvas');
+    var ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, 240, 240);
+    var tmp = document.createElement('div');
+    try {
+      new QRCode(tmp, {
+        text: url, width: 240, height: 240,
+        colorDark: '#000000', colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+      setTimeout(function() {
+        var el = tmp.querySelector('canvas') || tmp.querySelector('img');
+        if (!el) return;
+        if (el.tagName === 'CANVAS') {
+          ctx.drawImage(el, 0, 0, 240, 240);
+        } else {
+          var i = new Image();
+          i.onload = function() { ctx.drawImage(i, 0, 0, 240, 240); };
+          i.src = el.src;
+        }
+      }, 150);
+    } catch(e) {}
+  }
+
+  function refresh() {
+    currentToken = makeToken();
+    drawQR(buildQRUrl());
+    remaining = INTERVAL;
+    document.getElementById('timer-bar').style.width = '100%';
+  }
+
+  function forceRefresh() { refresh(); }
+
+  function toggleConfig() {
+    configOpen = !configOpen;
+    document.getElementById('config-area').style.display = configOpen ? 'block' : 'none';
+  }
+
+  function applyConfig() {
+    var school = document.getElementById('cfg-school').value.trim() || '학교명';
+    var cls    = document.getElementById('cfg-class').value.trim()  || '반 정보';
+    var url    = document.getElementById('cfg-url').value.trim();
+    var iv     = Math.max(10, Math.min(300, parseInt(document.getElementById('cfg-interval').value) || 60));
+
+    document.getElementById('school-name').textContent = school;
+    document.getElementById('class-name').textContent  = cls;
+    document.getElementById('no-url-notice').style.display = url ? 'none' : 'block';
+
+    localStorage.setItem('att_school',   school);
+    localStorage.setItem('att_class',    cls);
+    localStorage.setItem('att_url',      url);
+    localStorage.setItem('att_interval', iv);
+
+    APPS_URL = url;
+    INTERVAL = iv;
+    remaining = iv;
+    refresh();
+    toggleConfig();
+  }
+
+  function updateClock() {
+    var now = new Date();
+    var h = String(now.getHours()).padStart(2,'0');
+    var m = String(now.getMinutes()).padStart(2,'0');
+    var s = String(now.getSeconds()).padStart(2,'0');
+    document.getElementById('clock').textContent = h + ':' + m + ':' + s;
+    var days = ['일','월','화','수','목','금','토'];
+    document.getElementById('date-str').textContent =
+      now.getFullYear() + '년 ' + (now.getMonth()+1) + '월 ' + now.getDate() + '일 (' + days[now.getDay()] + ')';
+  }
+
+  function tick() {
+    updateClock();
+    remaining--;
+    if (remaining <= 0) refresh();
+    var pct = Math.max(0, Math.round((remaining / INTERVAL) * 100));
+    var bar = document.getElementById('timer-bar');
+    bar.style.width = pct + '%';
+    bar.style.background = remaining <= 10 ? '#E24B4A' : '#1D9E75';
+    document.getElementById('timer-count').textContent = Math.max(0, remaining);
+  }
+
+  loadSaved();
+  refresh();
+  updateClock();
+  setInterval(tick, 1000);
+</script>
+</body>
+</html>

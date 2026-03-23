@@ -18,8 +18,6 @@
     padding: 24px;
     color: #222;
   }
-
-  /* ── QR 화면 ── */
   #qr-screen { width: 100%; max-width: 520px; }
   #main-card {
     background: #fff;
@@ -78,21 +76,15 @@
   }
   #apply-btn:hover { background: #9FE1CB; }
   #no-url-notice { display: none; font-size: 12px; color: #E24B4A; margin-bottom: 12px; }
-
-  /* ── 출석폼 화면 ── */
   #form-screen { display: none; width: 100%; max-width: 400px; }
-  .form-card {
-    background: #fff; border-radius: 16px;
-    padding: 36px 28px; border: 1px solid #eee;
-  }
+  .form-card { background: #fff; border-radius: 16px; padding: 36px 28px; border: 1px solid #eee; }
   .form-card h2 { font-size: 20px; font-weight: 500; margin-bottom: 8px; color: #111; }
   .form-sub { font-size: 13px; color: #888; margin-bottom: 28px; }
   .form-label { font-size: 13px; color: #555; display: block; margin-bottom: 6px; }
   #sid-input {
     width: 100%; padding: 12px; font-size: 22px;
     border: 1px solid #ddd; border-radius: 10px;
-    margin-bottom: 20px; text-align: center; letter-spacing: 3px;
-    color: #111;
+    margin-bottom: 20px; text-align: center; letter-spacing: 3px; color: #111;
   }
   #sid-input:focus { outline: none; border-color: #1D9E75; }
   #submit-btn {
@@ -102,29 +94,21 @@
   }
   #submit-btn:disabled { background: #ccc; cursor: default; }
   #form-msg { margin-top: 12px; font-size: 13px; color: #E24B4A; text-align: center; min-height: 18px; }
-
-  /* ── 결과 화면 ── */
   #result-screen { display: none; width: 100%; max-width: 400px; }
-  .result-card {
-    background: #fff; border-radius: 16px;
-    padding: 48px 28px; border: 1px solid #eee; text-align: center;
-  }
+  .result-card { background: #fff; border-radius: 16px; padding: 48px 28px; border: 1px solid #eee; text-align: center; }
   .result-icon { font-size: 52px; margin-bottom: 20px; }
-  .result-title { font-size: 24px; font-weight: 500; color: #111; margin-bottom: 10px; }
+  .result-title { font-size: 24px; font-weight: 500; color: #111; margin-bottom: 10px; white-space: pre-line; }
   .result-sub { font-size: 14px; margin-top: 6px; }
   #back-btn {
     margin-top: 24px; padding: 10px 24px;
     border-radius: 8px; border: 1px solid #ddd;
-    background: transparent; color: #555;
-    font-size: 14px; cursor: pointer;
+    background: transparent; color: #555; font-size: 14px; cursor: pointer;
   }
-
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
 </style>
 </head>
 <body>
 
-<!-- QR 화면 -->
 <div id="qr-screen">
   <div id="main-card">
     <div id="top-bar">
@@ -168,7 +152,6 @@
   </div>
 </div>
 
-<!-- 출석 폼 화면 -->
 <div id="form-screen">
   <div class="form-card">
     <h2>출석 체크</h2>
@@ -180,7 +163,6 @@
   </div>
 </div>
 
-<!-- 결과 화면 -->
 <div id="result-screen">
   <div class="result-card">
     <div class="result-icon" id="result-icon"></div>
@@ -198,7 +180,6 @@ var currentToken = '';
 var configOpen = false;
 var currentScreen = 'qr';
 
-// ── 화면 전환 ──
 function showScreen(name) {
   document.getElementById('qr-screen').style.display = 'none';
   document.getElementById('form-screen').style.display = 'none';
@@ -207,7 +188,6 @@ function showScreen(name) {
   currentScreen = name;
 }
 
-// ── QR 화면 ──
 function loadSaved() {
   var school = localStorage.getItem('att_school') || '';
   var cls    = localStorage.getItem('att_class')  || '';
@@ -230,9 +210,10 @@ function makeToken() {
 }
 
 function drawQR() {
+  var pageUrl = 'https://honghyeyeon-daeil.github.io/attendance/';
   var url = APPS_URL
-    ? 'https://honghyeyeon-daeil.github.io/attendance/?token=' + currentToken
-    : 'https://honghyeyeon-daeil.github.io/attendance/?token=설정필요';
+    ? pageUrl + '?token=' + currentToken + '&api=' + encodeURIComponent(APPS_URL)
+    : pageUrl + '?token=설정필요';
   var canvas = document.getElementById('qr-canvas');
   var ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, 240, 240);
@@ -313,9 +294,9 @@ function tick() {
   document.getElementById('timer-count').textContent = Math.max(0, remaining);
 }
 
-// ── 출석 폼 화면 ──
-function showForm(token) {
+function showForm(token, apiUrl) {
   currentToken = token;
+  if (apiUrl) APPS_URL = apiUrl;
   document.getElementById('sid-input').value = '';
   document.getElementById('form-msg').textContent = '';
   document.getElementById('submit-btn').disabled = false;
@@ -338,7 +319,7 @@ function submitAttendance() {
   window[cbName] = function(data) {
     done = true;
     delete window[cbName];
-    document.body.removeChild(script);
+    if (document.body.contains(script)) document.body.removeChild(script);
     handleResult(data);
   };
 
@@ -346,12 +327,15 @@ function submitAttendance() {
     if (done) return;
     done = true;
     delete window[cbName];
-    document.body.removeChild(script);
+    if (document.body.contains(script)) document.body.removeChild(script);
     document.getElementById('form-msg').textContent = '오류가 발생했습니다. 다시 시도해주세요.';
     document.getElementById('submit-btn').disabled = false;
   };
 
-  script.src = APPS_URL + '?callback=' + cbName + '&t=' + currentToken + '&sid=' + encodeURIComponent(sid);
+  script.src = APPS_URL
+    + '?callback=' + encodeURIComponent(cbName)
+    + '&t=' + encodeURIComponent(currentToken)
+    + '&sid=' + encodeURIComponent(sid);
   document.body.appendChild(script);
 }
 
@@ -371,11 +355,9 @@ function handleResult(data) {
   }
 }
 
-// ── 결과 화면 ──
 function showResult(icon, title, sub, color) {
   document.getElementById('result-icon').textContent = icon;
   document.getElementById('result-title').textContent = title;
-  document.getElementById('result-title').style.whiteSpace = 'pre-line';
   document.getElementById('result-sub').textContent = sub;
   document.getElementById('result-sub').style.color = color;
   showScreen('result');
@@ -385,24 +367,23 @@ function goBack() {
   showScreen('qr');
 }
 
-// ── URL 파라미터 확인 (학생이 QR 스캔했을 때) ──
 function checkUrlParams() {
   var params = new URLSearchParams(window.location.search);
   var token = params.get('token');
-  if (token) {
+  var api = params.get('api');
+  if (token && token !== '설정필요') {
+    var apiUrl = api ? decodeURIComponent(api) : APPS_URL;
     history.replaceState(null, '', window.location.pathname);
-    showForm(token);
+    showForm(token, apiUrl);
   }
 }
 
-// ── 엔터키 ──
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Enter' && currentScreen === 'form') {
     submitAttendance();
   }
 });
 
-// ── 초기화 ──
 loadSaved();
 refresh();
 updateClock();
